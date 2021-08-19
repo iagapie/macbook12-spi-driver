@@ -464,22 +464,24 @@ static void appleals_config_sensor(struct appleals_device *als_dev,
 		hid_hw_power(als_dev->hid_dev, PM_HINT_NORMAL);
 }
 
-static inline struct iio_dev *iio_priv_to_dev(void *priv)
-{
-	return (struct iio_dev *)((char *)priv -
-				  ALIGN(sizeof(struct iio_dev), IIO_ALIGN));
-}
-
 static int appleals_config_iio(struct appleals_device *als_dev)
 {
-	struct iio_dev *iio_dev = iio_priv_to_dev(als_dev);
+	struct iio_dev *iio_dev;
 	struct iio_trigger *iio_trig;
 	struct device *parent = &als_dev->hid_dev->dev;
 	int rc;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+	iio_dev = iio_device_alloc(sizeof(als_dev));
+#else
+	iio_dev = iio_device_alloc(&als_dev->hid_dev->dev, sizeof(als_dev));
+#endif
+
 	iio_dev->channels = appleals_channels;
 	iio_dev->num_channels = ARRAY_SIZE(appleals_channels);
-	iio_dev->dev.parent = parent;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+	iio_dev->dev.parent = &als_dev->hid_dev->dev;
+#endif
 	iio_dev->info = &appleals_info;
 	iio_dev->name = "als";
 	iio_dev->modes = INDIO_DIRECT_MODE;
